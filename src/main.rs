@@ -3,23 +3,35 @@ mod popola;
 
 use game::{GameConfig, GameRenderer, GameState, new_rng};
 use macroquad::prelude::*;
+use popola::PopolaConfig;
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let config = GameConfig::new();
-    let mut rng = new_rng(config.get_seed());
-    let mut state = GameState::new(&config, &mut rng);
-    let mut renderer = GameRenderer::new(&config);
+    let game_config = GameConfig::new();
+    let popola_config = PopolaConfig::new();
+
+    let mut rng = new_rng(game_config.get_seed());
+    let mut state = GameState::new(&game_config, &mut rng);
+    let mut renderer = GameRenderer::new(&game_config, &popola_config);
 
     let mut accumulator = 0.0;
 
-    let mut sensor_buffer_curr = vec![0.0_f32; config.get_rast_size() * config.get_rast_size()];
-    let mut sensor_buffer_prev = sensor_buffer_curr.clone();
+    let mut raster_buffer_curr =
+        vec![0.0_f32; game_config.get_raster_size() * game_config.get_raster_size()];
+    let mut raster_buffer_prev = raster_buffer_curr.clone();
+
+    let mut sense_buffer_on =
+        vec![
+            0.0_f32;
+            (game_config.get_raster_size() / popola_config.get_sense_block_size())
+                * (game_config.get_raster_size() / popola_config.get_sense_block_size())
+        ];
+    let mut sense_buffer_off = sense_buffer_on.clone();
 
     game::rasterize(
         &state,
-        &config,
-        &mut sensor_buffer_curr,
+        &game_config,
+        &mut raster_buffer_curr,
         state.get_ball_timer() <= 0.0,
     );
 
@@ -33,24 +45,39 @@ async fn main() {
         let frame_time = get_frame_time() as f64;
         accumulator += frame_time;
 
-        let sim_step = config.get_dt() / state.get_sim_speed();
+        let sim_step = game_config.get_dt() / state.get_sim_speed();
 
         while accumulator >= sim_step {
-            game::update(&mut state, &config, &mut rng);
+            game::update(&mut state, &game_config, &mut rng);
 
-            std::mem::swap(&mut sensor_buffer_curr, &mut sensor_buffer_prev);
+            std::mem::swap(&mut raster_buffer_curr, &mut raster_buffer_prev);
 
             game::rasterize(
                 &state,
-                &config,
-                &mut sensor_buffer_curr,
+                &game_config,
+                &mut raster_buffer_curr,
                 state.get_ball_timer() <= 0.0,
+            );
+
+            popola::raster_to_sense(
+                &popola_config,
+                &game_config,
+                &raster_buffer_curr,
+                &raster_buffer_prev,
+                &mut sense_buffer_on,
+                &mut sense_buffer_off,
             );
 
             accumulator -= sim_step;
         }
 
-        renderer.draw(&state, &config, &sensor_buffer_curr);
+        renderer.draw(
+            &state,
+            &game_config,
+            &popola_config,
+            &sense_buffer_on,
+            &sense_buffer_off,
+        );
         next_frame().await;
     }
 }
