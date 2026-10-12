@@ -9,8 +9,8 @@ fn rasterize_rect(
     height: f32,
     value: f32,
 ) {
-    let scale = config.rast_size as f32 / config.game_size;
-    let limit = config.rast_size as f32;
+    let scale = config.raster_size as f32 / config.game_size;
+    let limit = config.raster_size as f32;
 
     let x0 = (x * scale).floor().clamp(0.0, limit) as usize;
     let y0 = (y * scale).floor().clamp(0.0, limit) as usize;
@@ -19,7 +19,7 @@ fn rasterize_rect(
 
     for gy in y0..y1 {
         for gx in x0..x1 {
-            raster_buffer[gy * config.rast_size + gx] = value;
+            raster_buffer[gy * config.raster_size + gx] = value;
         }
     }
 }
@@ -30,7 +30,7 @@ pub fn rasterize(
     raster_buffer: &mut [f32],
     rasterize_ball: bool,
 ) {
-    let total_pixels = config.rast_size * config.rast_size;
+    let total_pixels = config.raster_size * config.raster_size;
     assert!(raster_buffer.len() >= total_pixels);
     raster_buffer[..total_pixels].fill(0.0);
 
@@ -41,7 +41,7 @@ pub fn rasterize(
         state.player1.position.y,
         config.player.width,
         config.player.height,
-        1.0,
+        0.75,
     );
 
     rasterize_rect(
@@ -51,7 +51,7 @@ pub fn rasterize(
         state.player2.position.y,
         config.player.width,
         config.player.height,
-        1.0,
+        0.75,
     );
 
     if rasterize_ball {
@@ -62,7 +62,7 @@ pub fn rasterize(
             state.ball.position.y - config.ball.half_size,
             config.ball.size,
             config.ball.size,
-            0.5,
+            1.0,
         );
     }
 }

@@ -32,7 +32,7 @@ pub struct GameConfig {
     pub(super) round_time: f64,
     pub(super) ball_timer: f64,
     pub(super) seed: u64,
-    pub(super) rast_size: usize,
+    pub(super) raster_size: usize,
     pub(super) player: PlayerConfig,
     pub(super) bot: BotConfig,
     pub(super) ball: BallConfig,
@@ -64,7 +64,7 @@ impl GameConfig {
             round_time: 60.0,
             ball_timer: 2.0,
             seed: 0x0,
-            rast_size: 32,
+            raster_size: 32,
             player,
             bot: BotConfig {
                 reaction_ticks: 32,
@@ -84,7 +84,7 @@ impl GameConfig {
         self.dt
     }
 
-    pub fn get_rast_size(&self) -> usize {
-        self.rast_size
+    pub fn get_raster_size(&self) -> usize {
+        self.raster_size
     }
 }

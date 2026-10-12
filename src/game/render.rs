@@ -2,46 +2,63 @@ use std::fmt::Write as _;
 
 use macroquad::prelude::*;
 
+use crate::popola::PopolaConfig;
+
 use super::{config::GameConfig, state::GameState};
 
 pub struct GameRenderer {
-    raster_image: Image,
-    raster_texture: Texture2D,
+    sense_image: Image,
+    sense_texture: Texture2D,
     text_buffer: String,
 }
 
 impl GameRenderer {
-    pub fn new(config: &GameConfig) -> Self {
-        let raster_image =
-            Image::gen_image_color(config.rast_size as u16, config.rast_size as u16, BLACK);
-        let raster_texture = Texture2D::from_image(&raster_image);
-        raster_texture.set_filter(FilterMode::Nearest);
+    pub fn new(game_config: &GameConfig, popola_config: &PopolaConfig) -> Self {
+        let sense_image = Image::gen_image_color(
+            (game_config.get_raster_size() / popola_config.get_sense_block_size()) as u16,
+            (game_config.get_raster_size() / popola_config.get_sense_block_size()) as u16,
+            BLACK,
+        );
+        let sense_texture = Texture2D::from_image(&sense_image);
+        sense_texture.set_filter(FilterMode::Nearest);
 
         Self {
-            raster_image,
-            raster_texture,
+            sense_image,
+            sense_texture,
             text_buffer: String::with_capacity(64),
         }
     }
 
-    pub fn draw(&mut self, state: &GameState, config: &GameConfig, raster_buffer: &[f32]) {
+    pub fn draw(
+        &mut self,
+        state: &GameState,
+        game_config: &GameConfig,
+        popola_config: &PopolaConfig,
+        sense_buffer_on: &[f32],
+        sense_buffer_off: &[f32],
+    ) {
         Self::setup_draw();
 
         let game_scale = f32::min(
-            screen_width() / config.game_size,
-            screen_height() / config.game_size,
+            screen_width() / game_config.game_size,
+            screen_height() / game_config.game_size,
         );
-        let game_offset_x = (screen_width() - config.game_size * game_scale) / 2.0;
-        let game_offset_y = (screen_height() - config.game_size * game_scale) / 2.0;
+        let game_offset_x = (screen_width() - game_config.game_size * game_scale) / 2.0;
+        let game_offset_y = (screen_height() - game_config.game_size * game_scale) / 2.0;
 
-        Self::draw_net(config, game_scale, game_offset_x, game_offset_y);
-        Self::draw_p1(config, state, game_scale, game_offset_x, game_offset_y);
-        Self::draw_p2(config, state, game_scale, game_offset_x, game_offset_y);
-        Self::draw_ball(config, state, game_scale, game_offset_x, game_offset_y);
-        self.draw_rasterized(config, raster_buffer);
+        Self::draw_net(game_config, game_scale, game_offset_x, game_offset_y);
+        Self::draw_p1(game_config, state, game_scale, game_offset_x, game_offset_y);
+        Self::draw_p2(game_config, state, game_scale, game_offset_x, game_offset_y);
+        Self::draw_ball(game_config, state, game_scale, game_offset_x, game_offset_y);
+        self.draw_sense(
+            game_config,
+            popola_config,
+            sense_buffer_on,
+            sense_buffer_off,
+        );
 
         set_default_camera();
-        Self::draw_paused(config, state, game_scale, game_offset_x, game_offset_y);
+        Self::draw_paused(game_config, state, game_scale, game_offset_x, game_offset_y);
         self.draw_fps();
         self.draw_hud(state);
     }
@@ -56,31 +73,47 @@ impl GameRenderer {
         });
     }
 
-    fn draw_rasterized(&mut self, config: &GameConfig, raster_buffer: &[f32]) {
-        let total_pixels = config.rast_size * config.rast_size;
-        assert!(raster_buffer.len() >= total_pixels);
+    fn draw_sense(
+        &mut self,
+        game_config: &GameConfig,
+        popola_config: &PopolaConfig,
+        sense_buffer_on: &[f32],
+        sense_buffer_off: &[f32],
+    ) {
+        let rast_size = game_config.get_raster_size();
+        let block_size = popola_config.get_sense_block_size();
+        let blocks_per_row = rast_size / block_size;
+        let total_blocks = blocks_per_row * blocks_per_row;
 
-        for y in 0..config.rast_size {
-            for x in 0..config.rast_size {
-                let index = y * config.rast_size + x;
-                let brightness = (raster_buffer[index] * 255.0).clamp(0.0, 255.0) as u8;
-                let color = Color::from_rgba(brightness, brightness, brightness, 255);
-                self.raster_image.set_pixel(x as u32, y as u32, color);
+        assert!(sense_buffer_on.len() >= total_blocks);
+        assert!(sense_buffer_off.len() >= total_blocks);
+
+        let gain = 2.0_f32;
+
+        for y in 0..blocks_per_row {
+            for x in 0..blocks_per_row {
+                let index = y * blocks_per_row + x;
+
+                let on_val = (sense_buffer_on[index] * gain * 255.0).clamp(0.0, 255.0) as u8;
+                let off_val = (sense_buffer_off[index] * gain * 255.0).clamp(0.0, 255.0) as u8;
+
+                let color = Color::from_rgba(off_val, on_val, 0, 255);
+
+                self.sense_image.set_pixel(x as u32, y as u32, color);
             }
         }
 
-        self.raster_texture.update(&self.raster_image);
+        self.sense_texture.update(&self.sense_image);
+
+        let display_size = game_config.raster_size as f32 * 6.0;
 
         draw_texture_ex(
-            &self.raster_texture,
+            &self.sense_texture,
             10.0,
             10.0,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(
-                    config.rast_size as f32 * 8.0,
-                    config.rast_size as f32 * 8.0,
-                )),
+                dest_size: Some(vec2(display_size, display_size)),
                 ..Default::default()
             },
         );
@@ -88,8 +121,8 @@ impl GameRenderer {
         draw_rectangle_lines(
             9.0,
             10.0,
-            config.rast_size as f32 * 8.0 + 2.0,
-            config.rast_size as f32 * 8.0 + 2.0,
+            display_size + 2.0,
+            display_size + 2.0,
             2.0,
             WHITE,
         );
