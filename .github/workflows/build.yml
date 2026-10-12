@@ -1,0 +1,74 @@
+name: Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS ARM64
+            artifact: popola-macos-arm64
+            exe_suffix: ""
+
+          - os: ubuntu-latest
+            name: Linux x86_64
+            artifact: popola-linux-x86_64
+            exe_suffix: ""
+
+          - os: macos-15-intel
+            name: macOS Intel
+            artifact: popola-macos-x86_64
+            exe_suffix: ""
+
+          - os: windows-latest
+            name: Windows x86_64
+            artifact: popola-windows-x86_64
+            exe_suffix: ".exe"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run tests
+        run: cargo test --locked --verbose
+
+      - name: Build release
+        run: cargo build --release --locked --verbose
+
+      - name: Prepare binary
+        shell: bash
+        env:
+          BIN_NAME: p0p0l4
+          EXE_SUFFIX: ${{ matrix.exe_suffix }}
+          ARTIFACT_NAME: ${{ matrix.artifact }}
+        run: |
+          mkdir -p dist
+          cp "target/release/${BIN_NAME}${EXE_SUFFIX}" \
+             "dist/${ARTIFACT_NAME}${EXE_SUFFIX}"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}${{ matrix.exe_suffix }}
+          if-no-files-found: error
+          retention-days: 28
