@@ -1,2 +1,8 @@
-/target
 .DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.spec
+/build/
+/dist/
