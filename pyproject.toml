@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "p0p0l4"
+version = "0.2.1"
+description = "env with bio-net"
+requires-python = ">=3.11"
+authors = [{name = "bytefid", email = "bytefid@gmail.com"}]
+license = "Apache-2.0"
+dependencies = ["pygame-ce==2.5.7"]
+
+[project.optional-dependencies]
+build = ["pyinstaller==6.16.0"]
+
+[project.scripts]
+popola = "p0p0l4.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+p0p0l4 = ["assets/*"]

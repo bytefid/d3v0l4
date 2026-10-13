@@ -1,0 +1,2 @@
+include src/main.py
+recursive-include tests *.py *.json *.jsonl
