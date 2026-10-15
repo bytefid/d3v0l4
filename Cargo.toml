@@ -1,13 +1,20 @@
-[package]
-name = "p0p0l4"
-version = "0.2.1"
+[workspace]
+resolver = "3"
+members = [
+    "crates/devola",
+    "crates/devola_core",
+    "crates/devola_world",
+]
+
+[workspace.package]
 edition = "2024"
-description = "env with bio-net"
 authors = ["bytefid <bytefid@gmail.com>"]
 license = "Apache-2.0"
 
-[dependencies]
-macroquad = "0.4.16"
+[workspace.dependencies]
+devola_core = { path = "crates/devola_core" }
+devola_world = { path = "crates/devola_world" }
+bevy = "0.20.0"
 rand = "0.10.3"
 
 [profile.dev]
