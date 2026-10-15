@@ -23,22 +23,22 @@ jobs:
         include:
           - os: macos-latest
             name: macOS ARM64
-            artifact: popola-macos-arm64
+            artifact: devola_macos_arm64
             exe_suffix: ""
 
           - os: ubuntu-latest
             name: Linux x86_64
-            artifact: popola-linux-x86_64
+            artifact: devola_linux_x86_64
             exe_suffix: ""
 
           - os: macos-15-intel
             name: macOS Intel
-            artifact: popola-macos-x86_64
+            artifact: devola_macos_x86_64
             exe_suffix: ""
 
           - os: windows-latest
             name: Windows x86_64
-            artifact: popola-windows-x86_64
+            artifact: devola_windows_x86_64
             exe_suffix: ".exe"
 
     steps:
@@ -57,7 +57,7 @@ jobs:
       - name: Prepare binary
         shell: bash
         env:
-          BIN_NAME: p0p0l4
+          BIN_NAME: devola
           EXE_SUFFIX: ${{ matrix.exe_suffix }}
           ARTIFACT_NAME: ${{ matrix.artifact }}
         run: |
